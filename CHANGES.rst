@@ -9,7 +9,10 @@ New Features
   - Automatically use ``guess=False`` when reading if the file ``format`` is
     provided and the format parameters are uniquely specified.  This update
     also removes duplicate format guesses to improve performance. [#3418]
+- ``astropy.table``
 
+  - Added ``Table.to_pandas`` and ``Table.from_pandas`` for converting to/from
+    pandas dataframes.
 
 1.0rc1 (2015-01-27)
 -------------------

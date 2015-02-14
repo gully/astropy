@@ -7,6 +7,7 @@ import copy
 import gc
 
 import numpy as np
+from numpy.testing import assert_allclose
 
 from ...extern import six
 from ...tests.helper import pytest, assert_follows_unicode_guidelines
@@ -1364,3 +1365,64 @@ def test_nested_iteration():
         for r2 in t:
             out.append((r1['a'], r2['a']))
     assert out == [(0, 0), (0, 1), (1, 0), (1, 1)]
+
+
+class TestPandas(object):
+
+    def test_simple(self):
+
+        from pandas import DataFrame
+
+        t = table.Table()
+
+        for endian in ['<', '>']:
+            for kind in ['f', 'i']:
+                for byte in ['2','4','8']:
+                    dtype = np.dtype(endian + kind + byte)
+                    x = np.array([1,2,3], dtype=dtype)
+                    t[endian + kind + byte] = x
+
+        t['u'] = ['a','b','c']
+        t['s'] = [b'a', b'b', b'c']
+
+        d = t.to_pandas()
+
+        for column in t.columns:
+            if column == 'u':
+                assert np.all(t['u'] == np.array(['a','b','c']))
+            elif column == 's':
+                assert np.all(t['s'] == np.array([b'a',b'b',b'c']))
+            else:
+                assert_allclose(t[column], d[column])
+
+        t2 = table.Table.from_pandas(d)
+
+        for column in t.columns:
+            if column in ('u', 's'):
+                assert np.all(t[column] == t2[column])
+            else:
+                assert_allclose(t[column], t2[column])
+
+    def test_2d(self):
+
+        from pandas import DataFrame
+
+        t = table.Table()
+        t['a'] = [1,2,3]
+        t['b'] = np.ones((3,2))
+
+        with pytest.raises(ValueError) as exc:
+            d = t.to_pandas()
+        assert exc.value.args[0] == "Cannot convert a table with multi-dimensional columns to a pandas DataFrame"
+
+    def test_mixin(self):
+
+        from pandas import DataFrame
+        from ...coordinates import SkyCoord
+
+        t = table.Table()
+        t['c'] = SkyCoord([1,2,3], [4,5,6], unit='deg')
+
+        with pytest.raises(ValueError) as exc:
+            d = t.to_pandas()
+        assert exc.value.args[0] == "Cannot convert a table with mixin columns to a pandas DataFrame"
